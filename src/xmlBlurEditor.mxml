@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009"
+					   xmlns:s="library://ns.adobe.com/flex/spark"
+					   xmlns:mx="library://ns.adobe.com/flex/mx"
+					   width="436" height="424" initialize="init(event)">
+	<fx:Script>
+		<![CDATA[
+			import mx.controls.Alert;
+			import mx.events.FlexEvent;
+			
+			private var _xmlDataSelectFile:File;
+			private var _mapDataFileFilter:FileFilter = new FileFilter("zip", "*.zip");//地图文件过滤
+			
+			private var _dataFile:File;
+			
+			protected function init(event:FlexEvent):void
+			{
+				trace("-------------初始化-------------------------");
+				addEventListener(NativeDragEvent.NATIVE_DRAG_ENTER, onDragInHandler);
+			}
+			
+			protected function onDragInHandler(event:NativeDragEvent):void
+			{
+				var transferable : Clipboard = event.clipboard;
+				
+				if(transferable.hasFormat(ClipboardFormats.FILE_LIST_FORMAT))
+				{
+					var files : Array = transferable.getData(ClipboardFormats.FILE_LIST_FORMAT) as Array;
+					
+					if(files)
+					{
+						_dataFile= File(files[0]);
+						trace(_dataFile)
+						if(_dataFile.name.indexOf(".zip")== -1)
+						{
+							Alert.show("瓜娃子，我要的只是zip文件");
+						}else{
+							Alert.show("好兄弟，zip文件已经成功导入");
+						}
+					}
+				}
+			}
+			
+			protected function startBlur(event:MouseEvent):void
+			{
+				if(!formateName.text) Alert.show("你到底想要啥子文件后缀");
+				if(_dataFile.name.indexOf(".zip") == -1) Alert.show("我想要的文件格式是zip");
+				if(formateName.text && _dataFile.name.indexOf(".zip") >= 0) 
+				{
+					var data :ByteArray = new ByteArray();
+					var fileStream :FileStream = new FileStream();
+					fileStream.open(_dataFile, FileMode.READ);
+					fileStream.readBytes(data);//将字节读入data
+					fileStream.close();
+					var _urlStr :String= File.applicationDirectory.nativePath;
+					var name :String = _dataFile.name.substring(0,_dataFile.name.length-3);
+					_urlStr = _urlStr.replace(/\\/g, "/");
+					var path :String = _urlStr+'/data/'+name+formateName.text;
+					encode(data,path)
+					Alert.show("混淆成功,保存路径是："+path);
+				}
+			}
+			
+			protected function open_clickHandler(event:MouseEvent):void
+			{
+				
+				_xmlDataSelectFile = File.applicationDirectory;
+				_xmlDataSelectFile.browseForOpen("选择要混淆的封装xml的zip文件",[_mapDataFileFilter]);
+				_xmlDataSelectFile.addEventListener(Event.SELECT,selectMapData);
+			}
+			
+			//选择了地图文件
+			private function selectMapData(evet:Event):void{
+				
+				_xmlDataSelectFile.removeEventListener(Event.SELECT,selectMapData);
+				_dataFile = File(evet.target);
+				
+			}
+			
+			private function encode(data:ByteArray,path:String):void
+			{
+				if(_dataFile.name.indexOf(".zip") >= 0)
+				{
+					trace("加密完成"+path);
+					var byteArray :ByteArray = SecurityTool.encode(data,"zip");
+					var fileStream :FileStream = new FileStream();
+					fileStream.open( new File(path),FileMode.WRITE);
+					fileStream.writeBytes(byteArray);
+					fileStream.close();
+				}
+			}
+			
+			
+			
+			
+		]]>
+	</fx:Script>
+	<fx:Declarations>
+		<!-- 将非可视元素（例如服务、值对象）放在此处 -->
+	</fx:Declarations>
+	<s:Button id="start" x="360" y="4" label="开始混淆" toolTip="开始混淆" click="startBlur(event)"/>
+	<s:TextInput id="formateName" x="55" y="175"/>
+	<s:Label x="54" y="148" width="168" height="26" color="#DA2424" fontFamily="Times New Roman"
+			 fontSize="16" text="加密后的文件格式" toolTip="这个是你保存文件的后缀名"/>
+	<s:Button id="open" x="6" y="5" label="打开" toolTip="打开你想要的xml文件" click="open_clickHandler(event)"/>
+</s:WindowedApplication>
